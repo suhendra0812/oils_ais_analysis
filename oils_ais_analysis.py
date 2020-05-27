@@ -12,22 +12,25 @@ ais_df = pd.read_csv(ais_path)
 ais_gdf = gpd.GeoDataFrame(ais_df, geometry=gpd.points_from_xy(ais_df['longitude'], ais_df['latitude']))
 
 oil_gdf['DATETIME-UNIFORM'] = [datetime.strptime(i[:-11], '%Y-%m-%dT%H').strftime('%Y-%m-%dT%H:%M:%S') for i in oil_gdf['DATE-TIME']]
-oil_dissolve = oil_gdf.dissolve(by='DATETIME-UNIFORM')
+#oil_dissolve = oil_gdf.dissolve(by='DATETIME-UNIFORM')
 
-oil_buffer = oil_dissolve.copy()
+oil_buffer = oil_gdf.copy()
 oil_buffer.geometry = oil_buffer.geometry.centroid.buffer(0.5)
+oil_buffer = oil_buffer.dissolve(by='DATETIME-UNIFORM')
 
 ais_name = os.path.basename(os.path.splitext(ais_path)[0])
-ais_clip = gpd.clip(ais_gdf, oil_buffer)
 
 ais_filter_list = []
 ais_filter_ori_list = []
 ais_line_gdf_list = []
 
-for oil_dtime in oil_dissolve['DATE-TIME'].values:
-    oildate = datetime.strptime(oil_dtime, '%Y-%m-%dT%H:%M:%S.%fZ')
+for i, row in oil_buffer.iterrows():
+    oildate = datetime.strptime(row['DATE-TIME'], '%Y-%m-%dT%H:%M:%S.%fZ')
     startdate = (oildate - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%S')
     stopdate = (oildate + timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%S')
+    
+    ais_clip = gpd.clip(ais_gdf, row.geometry)
+    ais_clip['time-uniform'] = row.name
 
     ais_filter = ais_clip.loc[(ais_clip['time'] >= startdate) & (ais_clip['time'] <= stopdate)]
     ais_filter_ori = ais_gdf.loc[ais_gdf['mmsi'].isin(ais_filter['mmsi'])]
@@ -56,6 +59,7 @@ oil_name = os.path.basename(os.path.splitext(oil_path)[0])
 
 oil_layer = QgsVectorLayer(oil_gdf.to_json(), oil_name, "ogr")
 oil_buffer_layer = QgsVectorLayer(oil_buffer.to_json(), oil_name+"_buffer", "ogr")
+
 QgsProject.instance().addMapLayer(oil_buffer_layer)
 QgsProject.instance().addMapLayer(oil_layer)
 QgsProject.instance().addMapLayer(ais_line_layer)
