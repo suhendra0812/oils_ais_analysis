@@ -1,11 +1,21 @@
 import geopandas as gpd
 import pandas as pd
 from datetime import datetime, timedelta
-import os
+import os, sys
 from shapely.geometry import LineString
 
-oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181220_oils.shp"
-ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181220_ais.csv"
+basemap_path = r"D:\BARATA\1.basemaps\base_p_ina_geo_fix.shp"
+wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
+
+# SUHENDRA-PC
+#os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill")
+#oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181220_oils.shp"
+#ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181220_ais.csv"
+
+# WSBARATA01
+os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
+oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181229_oils.shp"
+ais_path = r"D:\BARATA\10.ais\2018\indo_20181229_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
 ais_df = pd.read_csv(ais_path)
@@ -88,13 +98,20 @@ oil_name = os.path.basename(os.path.splitext(oil_path)[0])
 oil_layer = QgsVectorLayer(oil_gdf.to_json(), oil_name, "ogr")
 oil_buffer_layer = QgsVectorLayer(oil_buffer.to_json(), oil_name+"_buffer", "ogr")
 
-oil_buffer_layer.loadNamedStyle(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis\templates\oils_buffer.qml")
-oil_layer.loadNamedStyle(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis\templates\oils_fill.qml")
-ais_line_layer.loadNamedStyle(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis\templates\ais_line_trajectory.qml")
-ais_filter_ori_layer.loadNamedStyle(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis\templates\ais_all.qml")
-ais_filter_a_layer.loadNamedStyle(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis\templates\ais_clip_a.qml")
-ais_filter_b_layer.loadNamedStyle(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis\templates\ais_clip_b.qml")
+basemap_layer = QgsVectorLayer(basemap_path, 'Peta Indonesia', 'ogr')
+wpp_layer = QgsVectorLayer(wpp_path, 'WPP RI', 'ogr')
 
+basemap_layer.loadNamedStyle(r"templates\basemap.qml")
+wpp_layer.loadNamedStyle(r"templates\wpp.qml")
+oil_buffer_layer.loadNamedStyle(r"templates\oils_buffer.qml")
+oil_layer.loadNamedStyle(r"templates\oils_fill.qml")
+ais_line_layer.loadNamedStyle(r"templates\ais_line_trajectory.qml")
+ais_filter_ori_layer.loadNamedStyle(r"templates\ais_all.qml")
+ais_filter_a_layer.loadNamedStyle(r"templates\ais_clip_a.qml")
+ais_filter_b_layer.loadNamedStyle(r"templates\ais_clip_b.qml")
+
+QgsProject.instance().addMapLayer(basemap_layer)
+QgsProject.instance().addMapLayer(wpp_layer)
 QgsProject.instance().addMapLayer(oil_buffer_layer)
 QgsProject.instance().addMapLayer(oil_layer)
 QgsProject.instance().addMapLayer(ais_line_layer)
