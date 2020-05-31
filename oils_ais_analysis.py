@@ -88,8 +88,6 @@ ais_filter_ori = gpd.GeoDataFrame(pd.concat(ais_filter_ori_list, ignore_index=Tr
 ais_line_gdf = gpd.GeoDataFrame(pd.concat(ais_line_gdf_list, ignore_index=True))
 
 # memuat data agar dapat ditampilkan di canvas QGIS
-ais_filter_a_layer = QgsVectorLayer(ais_filter_a.to_json(), ais_name+"_clip_a", "ogr")
-ais_filter_b_layer = QgsVectorLayer(ais_filter_b.to_json(), ais_name+"_clip_b", "ogr")
 ais_filter_ori_layer = QgsVectorLayer(ais_filter_ori.to_json(), ais_name, "ogr")
 ais_line_layer = QgsVectorLayer(ais_line_gdf.to_json(), ais_name+'_line','ogr')
 
@@ -107,8 +105,6 @@ oil_buffer_layer.loadNamedStyle(r"templates\oils_buffer.qml")
 oil_layer.loadNamedStyle(r"templates\oils_fill.qml")
 ais_line_layer.loadNamedStyle(r"templates\ais_line_trajectory.qml")
 ais_filter_ori_layer.loadNamedStyle(r"templates\ais_all.qml")
-ais_filter_a_layer.loadNamedStyle(r"templates\ais_clip_a.qml")
-ais_filter_b_layer.loadNamedStyle(r"templates\ais_clip_b.qml")
 
 QgsProject.instance().addMapLayer(basemap_layer)
 QgsProject.instance().addMapLayer(wpp_layer)
@@ -116,5 +112,23 @@ QgsProject.instance().addMapLayer(oil_buffer_layer)
 QgsProject.instance().addMapLayer(oil_layer)
 QgsProject.instance().addMapLayer(ais_line_layer)
 QgsProject.instance().addMapLayer(ais_filter_ori_layer)
-QgsProject.instance().addMapLayer(ais_filter_b_layer)
-QgsProject.instance().addMapLayer(ais_filter_a_layer)
+
+def rule_based_style(layer, symbol, renderer, label, expression, color):
+    root_rule = renderer.rootRule()
+    rule = root_rule.children()[0].clone()
+    rule.setLabel(label)
+    rule.setFilterExpression(expression)
+    rule.symbol().setColor(QColor(color))
+    root_rule.appendChild(rule)
+    layer.setRenderer(renderer)
+    layer.triggerRepaint()
+    iface.layerTreeView().refreshLayerSymbology(layer.id())
+
+oil_date = oilstrptime.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
+
+symbol = QgsSymbol.defaultSymbol(ais_filter_ori_layer.geometryType())
+renderer = QgsRuleBasedRenderer(symbol)
+    
+rule_based_style(ais_filter_ori_layer, symbol, renderer,  'before', f"\"time\" < '{oil_date}'", 'cyan')
+rule_based_style(ais_filter_ori_layer, symbol, renderer, 'after', f"\"time\" > '{oil_date}'", 'yellow')
+
