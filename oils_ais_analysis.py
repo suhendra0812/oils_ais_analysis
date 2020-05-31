@@ -8,14 +8,14 @@ basemap_path = r"D:\BARATA\1.basemaps\base_p_ina_geo_fix.shp"
 wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # SUHENDRA-PC
-#os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill")
-#oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181220_oils.shp"
-#ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181220_ais.csv"
+os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
+oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181207_oils.shp"
+ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181207_ais.csv"
 
 # WSBARATA01
-os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
-oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181229_oils.shp"
-ais_path = r"D:\BARATA\10.ais\2018\indo_20181229_ais.csv"
+#os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
+#oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181229_oils.shp"
+#ais_path = r"D:\BARATA\10.ais\2018\indo_20181229_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
 ais_df = pd.read_csv(ais_path)
@@ -51,14 +51,14 @@ ais_filter_ori_list = []
 ais_line_gdf_list = []
 
 # looping setiap buffer oil
-for i, row in oil_buffer.iterrows():
-    oilstrptime = datetime.strptime(row['DATE-TIME'], '%Y-%m-%d %H:%M:%S')
+for i, oil in oil_buffer.iterrows():
+    oilstrptime = datetime.strptime(oil['DATE-TIME'], '%Y-%m-%d %H:%M:%S')
     oildate = oilstrptime.strftime('%Y-%m-%dT%H:%M:%S')
     startdate = (oilstrptime - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%S')
     stopdate = (oilstrptime + timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%S')
     
     # clip ais pada setiap buffer oil
-    ais_clip = gpd.clip(ais_gdf, row.geometry)
+    ais_clip = gpd.clip(ais_gdf, oil.geometry)
     
     # filter ais pada rentang waktu 1 jam sebelum dan sesudah waktu oil
     ais_filter = ais_clip.loc[(ais_clip['time'] >= startdate) & (ais_clip['time'] <= stopdate)]
@@ -68,11 +68,11 @@ for i, row in oil_buffer.iterrows():
     
     # membuat data ais dalam bentuk line dengan sortir waktu
     ais_filter_ori = ais_filter_ori.sort_values(by='time')
-    ais_line = ais_filter_ori.groupby('mmsi')['geometry'].apply(lambda x: LineString(x.tolist()) if x.size > 1 else None)
+    ais_line = ais_filter_ori.groupby('mmsi')['geometry'].apply(lambda x: LineString(x.tolist()) if x.size > 1 else None).reset_index()
     ais_min_time = ais_filter_ori.groupby('mmsi')['time'].agg('min')
     ais_max_time = ais_filter_ori.groupby('mmsi')['time'].agg('max')
 
-    ais_line_gdf = gpd.GeoDataFrame(ais_line, geometry=ais_line[ais_line != None])
+    ais_line_gdf = gpd.GeoDataFrame(ais_line[~ais_line.geometry.isna()])
     ais_line_gdf = ais_line_gdf.merge(ais_min_time, on='mmsi')
     ais_line_gdf = ais_line_gdf.merge(ais_max_time, on='mmsi', suffixes=('_start', '_end')).reset_index()
     
@@ -81,7 +81,7 @@ for i, row in oil_buffer.iterrows():
     ais_filter_b_list.append(ais_filter_b)
     ais_filter_ori_list.append(ais_filter_ori)
     ais_line_gdf_list.append(ais_line_gdf)
-    
+
 ais_filter_a = gpd.GeoDataFrame(pd.concat(ais_filter_a_list, ignore_index=True))
 ais_filter_b = gpd.GeoDataFrame(pd.concat(ais_filter_b_list, ignore_index=True))
 ais_filter_ori = gpd.GeoDataFrame(pd.concat(ais_filter_ori_list, ignore_index=True))
