@@ -9,8 +9,8 @@ wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # SUHENDRA-PC
 os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
-oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181212_oils.shp"
-ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181212_ais.csv"
+oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181207_oils.shp"
+ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181207_ais.csv"
 
 # WSBARATA01
 #os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
@@ -43,6 +43,15 @@ for i in range(len(oil_buffer['DATE-TIME']) - 1):
 oil_buffer['DATE-TIME'] = oil_buffer['DATE-TIME'].astype(str)
 oil_buffer = oil_buffer.dissolve(by='DATE-TIME', aggfunc='mean').reset_index()
 
+def timedelta_max(dt_list):
+    td_list = [dt_list.iloc[i]-dt_list.iloc[i-1] for i in range(1, len(dt_list))]
+    if not len(td_list) == 0:
+        td_max = max(td_list)
+    else:
+        td_max = timedelta(0)
+
+    return td_max
+
 def rule_based_style(layer, symbol, renderer, label, expression, color):
     root_rule = renderer.rootRule()
     rule = root_rule.children()[0].clone()
@@ -74,11 +83,15 @@ for i, oil in oil_buffer.iterrows():
     
     # membuat data ais dalam bentuk line dengan sortir waktu
     ais_filter_ori = ais_filter_ori.sort_values(by='time')
-    ais_line = ais_filter_ori.groupby('mmsi')['geometry'].apply(lambda x: LineString(x.tolist()) if x.size > 1 else None).reset_index()
+    ais_line = ais_filter_ori.groupby('mmsi')['geometry'].apply(lambda x: LineString(x.tolist()) if x.size > 1 else None)
     ais_min_time = ais_filter_ori.groupby('mmsi')['time'].agg('min')
     ais_max_time = ais_filter_ori.groupby('mmsi')['time'].agg('max')
-
-    ais_line_gdf = gpd.GeoDataFrame(ais_line[~ais_line.geometry.isna()])
+    
+    ais_filter_ori['time'] = ais_filter_ori['time'].astype('datetime64')
+    ais_max_td = ais_filter_ori.groupby('mmsi')['time'].apply(timedelta_max)
+    ais_filter_ori['time'] = ais_filter_ori['time'].astype(str)
+    
+    ais_line_gdf = gpd.GeoDataFrame(ais_line[~ais_line.isna()])
     ais_line_gdf = ais_line_gdf.merge(ais_min_time, on='mmsi')
     ais_line_gdf = ais_line_gdf.merge(ais_max_time, on='mmsi', suffixes=('_start', '_end')).reset_index()
     
