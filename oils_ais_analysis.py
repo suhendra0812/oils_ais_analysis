@@ -9,8 +9,8 @@ wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # SUHENDRA-PC
 os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
-oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181207_oils.shp"
-ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181207_ais.csv"
+oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181212_oils.shp"
+ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181212_ais.csv"
 
 # WSBARATA01
 #os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
@@ -43,12 +43,18 @@ for i in range(len(oil_buffer['DATE-TIME']) - 1):
 oil_buffer['DATE-TIME'] = oil_buffer['DATE-TIME'].astype(str)
 oil_buffer = oil_buffer.dissolve(by='DATE-TIME', aggfunc='mean').reset_index()
 
-ais_name = os.path.basename(os.path.splitext(ais_path)[0])
+def rule_based_style(layer, symbol, renderer, label, expression, color):
+    root_rule = renderer.rootRule()
+    rule = root_rule.children()[0].clone()
+    rule.setLabel(label)
+    rule.setFilterExpression(expression)
+    rule.symbol().setColor(QColor(color))
+    root_rule.appendChild(rule)
+    layer.setRenderer(renderer)
+    layer.triggerRepaint()
+    iface.layerTreeView().refreshLayerSymbology(layer.id())
 
-ais_filter_a_list = []
-ais_filter_b_list = []
-ais_filter_ori_list = []
-ais_line_gdf_list = []
+root = QgsProject.instance().layerTreeRoot()
 
 # looping setiap buffer oil
 for i, oil in oil_buffer.iterrows():
@@ -76,59 +82,49 @@ for i, oil in oil_buffer.iterrows():
     ais_line_gdf = ais_line_gdf.merge(ais_min_time, on='mmsi')
     ais_line_gdf = ais_line_gdf.merge(ais_max_time, on='mmsi', suffixes=('_start', '_end')).reset_index()
     
-    # menggabungkan data yang telah diperoleh dari setiap baris
-    ais_filter_a_list.append(ais_filter_a)
-    ais_filter_b_list.append(ais_filter_b)
-    ais_filter_ori_list.append(ais_filter_ori)
-    ais_line_gdf_list.append(ais_line_gdf)
+    oil_row = oil_gdf[oil_gdf['DATE-TIME'].str.contains(oildate[:-6])]
+    oil_buffer_row = gpd.GeoDataFrame([oil])
+    
+    # memuat data agar dapat ditampilkan di canvas QGIS
+    ais_filter_ori_layer = QgsVectorLayer(ais_filter_ori.to_json(), oildate+"_ais", "ogr")
+    ais_line_layer = QgsVectorLayer(ais_line_gdf.to_json(), oildate+'_line','ogr')
+    
+    oil_layer = QgsVectorLayer(oil_row.to_json(), oildate+"_oil", "ogr")
+    oil_buffer_layer = QgsVectorLayer(oil_buffer_row.to_json(), oildate+"_buffer", "ogr")
+    
+    QgsProject.instance().addMapLayer(oil_buffer_layer, False)
+    QgsProject.instance().addMapLayer(oil_layer, False)
+    QgsProject.instance().addMapLayer(ais_line_layer, False)
+    QgsProject.instance().addMapLayer(ais_filter_ori_layer, False)
+    
+    oil_date = oilstrptime.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
 
-ais_filter_a = gpd.GeoDataFrame(pd.concat(ais_filter_a_list, ignore_index=True))
-ais_filter_b = gpd.GeoDataFrame(pd.concat(ais_filter_b_list, ignore_index=True))
-ais_filter_ori = gpd.GeoDataFrame(pd.concat(ais_filter_ori_list, ignore_index=True))
-ais_line_gdf = gpd.GeoDataFrame(pd.concat(ais_line_gdf_list, ignore_index=True))
-
-# memuat data agar dapat ditampilkan di canvas QGIS
-ais_filter_ori_layer = QgsVectorLayer(ais_filter_ori.to_json(), ais_name, "ogr")
-ais_line_layer = QgsVectorLayer(ais_line_gdf.to_json(), ais_name+'_line','ogr')
-
-oil_name = os.path.basename(os.path.splitext(oil_path)[0])
-
-oil_layer = QgsVectorLayer(oil_gdf.to_json(), oil_name, "ogr")
-oil_buffer_layer = QgsVectorLayer(oil_buffer.to_json(), oil_name+"_buffer", "ogr")
+    symbol = QgsSymbol.defaultSymbol(ais_filter_ori_layer.geometryType())
+    renderer = QgsRuleBasedRenderer(symbol)
+        
+    rule_based_style(ais_filter_ori_layer, symbol, renderer,  'before', f"\"time\" < '{oil_date}'", 'cyan')
+    rule_based_style(ais_filter_ori_layer, symbol, renderer, 'after', f"\"time\" > '{oil_date}'", 'yellow')
+    
+    oil_buffer_layer.loadNamedStyle(r"templates\oils_buffer.qml")
+    oil_layer.loadNamedStyle(r"templates\oils_fill.qml")
+    ais_line_layer.loadNamedStyle(r"templates\ais_line_trajectory.qml")
+    
+    data_group = root.addGroup(oildate)
+    data_group.addLayer(ais_filter_ori_layer)
+    data_group.addLayer(ais_line_layer)
+    data_group.addLayer(oil_layer)
+    data_group.addLayer(oil_buffer_layer)
 
 basemap_layer = QgsVectorLayer(basemap_path, 'Peta Indonesia', 'ogr')
 wpp_layer = QgsVectorLayer(wpp_path, 'WPP RI', 'ogr')
 
+basemap_group = root.addGroup('Basemap')
+    
+QgsProject.instance().addMapLayer(basemap_layer, False)
+QgsProject.instance().addMapLayer(wpp_layer, False)
+
 basemap_layer.loadNamedStyle(r"templates\basemap.qml")
 wpp_layer.loadNamedStyle(r"templates\wpp.qml")
-oil_buffer_layer.loadNamedStyle(r"templates\oils_buffer.qml")
-oil_layer.loadNamedStyle(r"templates\oils_fill.qml")
-ais_line_layer.loadNamedStyle(r"templates\ais_line_trajectory.qml")
-ais_filter_ori_layer.loadNamedStyle(r"templates\ais_all.qml")
 
-QgsProject.instance().addMapLayer(basemap_layer)
-QgsProject.instance().addMapLayer(wpp_layer)
-QgsProject.instance().addMapLayer(oil_buffer_layer)
-QgsProject.instance().addMapLayer(oil_layer)
-QgsProject.instance().addMapLayer(ais_line_layer)
-QgsProject.instance().addMapLayer(ais_filter_ori_layer)
-
-def rule_based_style(layer, symbol, renderer, label, expression, color):
-    root_rule = renderer.rootRule()
-    rule = root_rule.children()[0].clone()
-    rule.setLabel(label)
-    rule.setFilterExpression(expression)
-    rule.symbol().setColor(QColor(color))
-    root_rule.appendChild(rule)
-    layer.setRenderer(renderer)
-    layer.triggerRepaint()
-    iface.layerTreeView().refreshLayerSymbology(layer.id())
-
-oil_date = oilstrptime.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]
-
-symbol = QgsSymbol.defaultSymbol(ais_filter_ori_layer.geometryType())
-renderer = QgsRuleBasedRenderer(symbol)
-    
-rule_based_style(ais_filter_ori_layer, symbol, renderer,  'before', f"\"time\" < '{oil_date}'", 'cyan')
-rule_based_style(ais_filter_ori_layer, symbol, renderer, 'after', f"\"time\" > '{oil_date}'", 'yellow')
-
+basemap_group.addLayer(wpp_layer)
+basemap_group.addLayer(basemap_layer)
