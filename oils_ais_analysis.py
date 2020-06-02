@@ -8,14 +8,14 @@ basemap_path = r"D:\BARATA\1.basemaps\base_p_ina_geo_fix.shp"
 wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # SUHENDRA-PC
-os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
-oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181207_oils.shp"
-ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181207_ais.csv"
+#os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
+#oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181207_oils.shp"
+#ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181207_ais.csv"
 
 # WSBARATA01
-#os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
-#oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181229_oils.shp"
-#ais_path = r"D:\BARATA\10.ais\2018\indo_20181229_ais.csv"
+os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
+oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181207_oils.shp"
+ais_path = r"D:\BARATA\10.ais\2018\indo_20181207_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
 ais_df = pd.read_csv(ais_path)
@@ -52,11 +52,14 @@ def timedelta_max(dt_list):
 
     return td_max
 
-def rule_based_style(layer, symbol, renderer, label, expression, color):
+def rule_based_style(layer, symbol, renderer, label, color, expression=None):
     root_rule = renderer.rootRule()
     rule = root_rule.children()[0].clone()
     rule.setLabel(label)
-    rule.setFilterExpression(expression)
+    if expression != None:
+        rule.setFilterExpression(expression)
+    else:
+        rule.setIsElse(True)
     rule.symbol().setColor(QColor(color))
     root_rule.appendChild(rule)
     layer.setRenderer(renderer)
@@ -115,8 +118,21 @@ for i, oil in oil_buffer.iterrows():
     symbol = QgsSymbol.defaultSymbol(ais_filter_ori_layer.geometryType())
     renderer = QgsRuleBasedRenderer(symbol)
         
-    rule_based_style(ais_filter_ori_layer, symbol, renderer,  'before', f"\"time\" < '{oil_date}'", 'cyan')
-    rule_based_style(ais_filter_ori_layer, symbol, renderer, 'after', f"\"time\" > '{oil_date}'", 'yellow')
+    #rule_based_style(ais_filter_ori_layer, symbol, renderer,  'before', f"\"time\" < '{oil_date}'", 'cyan')
+    #rule_based_style(ais_filter_ori_layer, symbol, renderer, 'after', f"\"time\" > '{oil_date}'", 'yellow')
+    
+    style_exp1 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) < -60"
+    style_exp2 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) < -30 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) >= -60"
+    style_exp3 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) < 0 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) >= -30"
+    style_exp4 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) > 0 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) <= 30"
+    style_exp5 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) > 30 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) <= 60"
+    
+    rule_based_style(ais_filter_ori_layer, symbol, renderer,  '> 60 minutes before', 'cyan', style_exp1)
+    rule_based_style(ais_filter_ori_layer, symbol, renderer, '30 - 60 minutes before', 'yellow', style_exp2)
+    rule_based_style(ais_filter_ori_layer, symbol, renderer,  '0 - 30 minutes before', 'orange', style_exp3)
+    rule_based_style(ais_filter_ori_layer, symbol, renderer, '0 - 30 minutes after', 'red', style_exp4)
+    rule_based_style(ais_filter_ori_layer, symbol, renderer, '30 - 60 minutes after', 'green', style_exp5)
+    rule_based_style(ais_filter_ori_layer, symbol, renderer, '> 60 minutes after', 'blue')
     
     oil_buffer_layer.loadNamedStyle(r"templates\oils_buffer.qml")
     oil_layer.loadNamedStyle(r"templates\oils_fill.qml")
