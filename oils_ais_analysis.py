@@ -14,8 +14,8 @@ wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # WSBARATA01
 os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
-oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181207_oils.shp"
-ais_path = r"D:\BARATA\10.ais\2018\indo_20181207_ais.csv"
+oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181210_oils.shp"
+ais_path = r"D:\BARATA\10.ais\2018\indo_20181210_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
 ais_df = pd.read_csv(ais_path)
