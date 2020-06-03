@@ -14,8 +14,8 @@ wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # WSBARATA01
 os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
-oil_path = r"D:\Suhendra\Riset BARATA\data oil & ship\kepri_201812_oils\kepri_20181210_oils.shp"
-ais_path = r"D:\BARATA\10.ais\2018\indo_20181210_ais.csv"
+oil_path = r"D:\Suhendra\Riset BARATA\data oil\kepri_201812_oils\kepri_20181213_oils.shp"
+ais_path = r"D:\BARATA\10.ais\2018\indo_20181213_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
 ais_df = pd.read_csv(ais_path)
@@ -26,7 +26,7 @@ ais_gdf = gpd.GeoDataFrame(ais_df, geometry=gpd.points_from_xy(ais_df['longitude
 
 # membuat buffer dari centroid oil
 oil_buffer = oil_gdf.copy()
-oil_buffer.geometry = oil_buffer.geometry.centroid.buffer(0.5)
+oil_buffer.geometry = oil_buffer.geometry.centroid.buffer(1)
 
 oil_buffer['DATE-TIME'] = [datetime.strptime(i, '%Y-%m-%dT%H:%M:%S.%fZ') for i in oil_buffer['DATE-TIME']]
 
@@ -126,13 +126,14 @@ for i, oil in oil_buffer.iterrows():
     style_exp3 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) < 0 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) >= -30"
     style_exp4 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) > 0 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) <= 30"
     style_exp5 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) > 30 AND minute(to_datetime(\"time\") - to_datetime('{oil_date}')) <= 60"
+    style_exp6 = f"minute(to_datetime(\"time\") - to_datetime('{oil_date}')) > 60"
     
     rule_based_style(ais_filter_ori_layer, symbol, renderer,  '> 60 minutes before', 'cyan', style_exp1)
     rule_based_style(ais_filter_ori_layer, symbol, renderer, '30 - 60 minutes before', 'yellow', style_exp2)
     rule_based_style(ais_filter_ori_layer, symbol, renderer,  '0 - 30 minutes before', 'orange', style_exp3)
     rule_based_style(ais_filter_ori_layer, symbol, renderer, '0 - 30 minutes after', 'red', style_exp4)
     rule_based_style(ais_filter_ori_layer, symbol, renderer, '30 - 60 minutes after', 'green', style_exp5)
-    rule_based_style(ais_filter_ori_layer, symbol, renderer, '> 60 minutes after', 'blue')
+    rule_based_style(ais_filter_ori_layer, symbol, renderer, '> 60 minutes after', 'blue', style_exp6)
     
     oil_buffer_layer.loadNamedStyle(r"templates\oils_buffer.qml")
     oil_layer.loadNamedStyle(r"templates\oils_fill.qml")
