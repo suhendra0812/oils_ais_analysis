@@ -14,7 +14,7 @@ def curvature(x, y):
     
     return k
 
-ais_sample = ais_filter_ori[ais_filter_ori['mmsi'] == 431220000]
+ais_sample = ais_filter_ori[ais_filter_ori['mmsi'] == 533130813]
 ais_sample = ais_sample[['time','longitude','latitude','sog','cog','heading']]
 
 t = (pd.to_datetime(ais_sample['time']) - pd.to_datetime('1970-01-01')).dt.total_seconds()
@@ -49,15 +49,27 @@ for ti in t_intp:
         print('Course is linear')
         L_lon = interp1d(ais_ti['time'], ais_ti['longitude'])
         L_lat = interp1d(ais_ti['time'], ais_ti['latitude'])
-        lon_intp.append(L_lon(ti))
-        lat_intp.append(L_lat(ti))
+        L_sog = interp1d(ais_ti['time'], ais_ti['sog'])
+        L_cog = interp1d(ais_ti['time'], ais_ti['cog'])
+        L_hdg = interp1d(ais_ti['time'], ais_ti['heading'])
+        lon_intp.append(float(L_lon(ti)))
+        lat_intp.append(float(L_lat(ti)))
+        sog_intp.append(float(L_sog(ti)))
+        cog_intp.append(float(L_cog(ti)))
+        hdg_intp.append(float(L_hdg(ti)))
         course_type.append('linear')
     else:
         print('Course is curve')
-        L_lon = PchipInterpolator(ais_ti['time'], ais_ti['longitude'])
-        L_lat = PchipInterpolator(ais_ti['time'], ais_ti['latitude'])
-        lon_intp.append(P_lon(ti))
-        lat_intp.append(P_lat(ti))
+        P_lon = PchipInterpolator(ais_ti['time'], ais_ti['longitude'])
+        P_lat = PchipInterpolator(ais_ti['time'], ais_ti['latitude'])
+        P_sog = interp1d(ais_ti['time'], ais_ti['sog'])
+        P_cog = interp1d(ais_ti['time'], ais_ti['cog'])
+        P_hdg = interp1d(ais_ti['time'], ais_ti['heading'])
+        lon_intp.append(float(P_lon(ti)))
+        lat_intp.append(float(P_lat(ti)))
+        sog_intp.append(float(P_sog(ti)))
+        cog_intp.append(float(P_cog(ti)))
+        hdg_intp.append(float(P_hdg(ti)))
         course_type.append('curve')
 """
 for ti in t_intp:
@@ -90,7 +102,7 @@ for ti in t_intp:
         lat_intp.append(P_lat(ti))
 """
 t_df = pd.to_datetime(t_intp, unit='s').astype(str)
-intp_gdf = gpd.GeoDataFrame({'time':t_df, 'course_type':course_type, 'k_mean':k_mean, 'k_std':k_std}, geometry=gpd.points_from_xy(lon_intp, lat_intp))
+intp_gdf = gpd.GeoDataFrame({'time':t_df, 'longitude':lon_intp, 'latitude':lat_intp, 'sog':sog_intp, 'cog':cog_intp, 'heading':hdg_intp, 'course_type':course_type, 'k_mean':k_mean, 'k_std':k_std}, geometry=gpd.points_from_xy(lon_intp, lat_intp))
 intp_layer = QgsVectorLayer(intp_gdf.to_json(), 'interpolasi', 'ogr')
 QgsProject.instance().addMapLayer(intp_layer)
 

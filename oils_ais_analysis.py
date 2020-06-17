@@ -8,14 +8,14 @@ basemap_path = r"D:\BARATA\1.basemaps\base_p_ina_geo_fix.shp"
 wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 
 # SUHENDRA-PC
-os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
-oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181212_oils.shp"
-ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181212_ais.csv"
+#os.chdir(r"E:\Development\BARATA\Riset\02-oil-spill\oils_ais_analysis")
+#oil_path = r"E:\Development\BARATA\Riset\02-oil-spill\kepri_201812_oils\kepri_20181212_oils.shp"
+#ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181212_ais.csv"
 
 # WSBARATA01
-#os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
-#oil_path = r"D:\Suhendra\Riset BARATA\data oil\kepri_201812_oils\kepri_20181213_oils.shp"
-#ais_path = r"D:\BARATA\10.ais\2018\indo_20181213_ais.csv"
+os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
+oil_path = r"D:\Suhendra\Riset BARATA\data oil\kepri_201812_oils\kepri_20181213_oils.shp"
+ais_path = r"D:\BARATA\10.ais\2018\indo_20181213_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
 ais_df = pd.read_csv(ais_path)
