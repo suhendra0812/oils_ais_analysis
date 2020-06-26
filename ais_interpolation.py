@@ -14,7 +14,8 @@ def curvature(x, y):
     
     return k
 
-ais_sample = ais_filter_ori[ais_filter_ori['mmsi'] == 533130813]
+mmsi = 477858800
+ais_sample = ais_filter_ori[ais_filter_ori['mmsi'] == mmsi]
 ais_sample = ais_sample[['time','longitude','latitude','sog','cog','heading']]
 
 t = (pd.to_datetime(ais_sample['time']) - pd.to_datetime('1970-01-01')).dt.total_seconds()
@@ -46,7 +47,6 @@ for ti in t_intp:
     k_std.append(std)
     
     if k.mean() < 0.5 and k.mean() > -0.5:
-        print('Course is linear')
         L_lon = interp1d(ais_ti['time'], ais_ti['longitude'])
         L_lat = interp1d(ais_ti['time'], ais_ti['latitude'])
         L_sog = interp1d(ais_ti['time'], ais_ti['sog'])
@@ -59,52 +59,20 @@ for ti in t_intp:
         hdg_intp.append(float(L_hdg(ti)))
         course_type.append('linear')
     else:
-        print('Course is curve')
         P_lon = PchipInterpolator(ais_ti['time'], ais_ti['longitude'])
         P_lat = PchipInterpolator(ais_ti['time'], ais_ti['latitude'])
-        P_sog = interp1d(ais_ti['time'], ais_ti['sog'])
-        P_cog = interp1d(ais_ti['time'], ais_ti['cog'])
-        P_hdg = interp1d(ais_ti['time'], ais_ti['heading'])
+        P_sog = PchipInterpolator(ais_ti['time'], ais_ti['sog'])
+        P_cog = PchipInterpolator(ais_ti['time'], ais_ti['cog'])
+        P_hdg = PchipInterpolator(ais_ti['time'], ais_ti['heading'])
         lon_intp.append(float(P_lon(ti)))
         lat_intp.append(float(P_lat(ti)))
         sog_intp.append(float(P_sog(ti)))
         cog_intp.append(float(P_cog(ti)))
         hdg_intp.append(float(P_hdg(ti)))
         course_type.append('curve')
-"""
-for ti in t_intp:
-    ais1 = ais_test[ais_test['time'] < ti]
-    ais2 = ais_test[ais_test['time'] > ti]
-    
-    if len(ais1) >= 2:
-        x1 = ais1.iloc[:2]['longitude']
-        y1 = ais1.iloc[:2]['latitude']
-        k1 = curvature(x1, y1)
-    else:
-        k1 = np.array(0)
-    std1 = k1.std()
-    
-    if len(ais2) >= 2:
-        x2 = ais2.iloc[:2]['longitude']
-        y2 = ais2.iloc[:2]['latitude']
-        k2 = curvature(x2, y2)
-    else:
-        k2 = np.array(0)
-    std2 = k2.std()
-    
-    if (k1.mean()-2*std1) <= k2.mean() <= (k1.mean()+2*std1):
-        print('Course is linear')
-        lon_intp.append(L_lon(ti))
-        lat_intp.append(L_lat(ti))
-    else:
-        print('Course is curve')
-        lon_intp.append(P_lon(ti))
-        lat_intp.append(P_lat(ti))
-"""
+
 t_df = pd.to_datetime(t_intp, unit='s').astype(str)
 intp_gdf = gpd.GeoDataFrame({'time':t_df, 'longitude':lon_intp, 'latitude':lat_intp, 'sog':sog_intp, 'cog':cog_intp, 'heading':hdg_intp, 'course_type':course_type, 'k_mean':k_mean, 'k_std':k_std}, geometry=gpd.points_from_xy(lon_intp, lat_intp))
-intp_layer = QgsVectorLayer(intp_gdf.to_json(), 'interpolasi', 'ogr')
+intp_layer = QgsVectorLayer(intp_gdf.to_json(), f'{mmsi}_interpolation_1', 'ogr')
 QgsProject.instance().addMapLayer(intp_layer)
-
-#intp_time = str(datetime.strptime(ais_sample['time'].iloc[1], '%Y-%m-%d %H:%M:%S') + timedelta(hours=1))
 
