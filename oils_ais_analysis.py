@@ -13,8 +13,8 @@ wpp_path = r"D:\BARATA\1.basemaps\WPP_NEW.shp"
 #ais_path = r"E:\Development\BARATA\Riset\09-data-ais\2018\indo_20181212_ais.csv"
 
 # WSBARATA01
-os.chdir(r"D:\Suhendra\Riset BARATA\oils_ais_analysis")
-oil_path = r"D:\Suhendra\Riset BARATA\data oil\kepri_201812_oils\kepri_20181207_oils.shp"
+os.chdir(r"D:\Suhendra\BARATA\Riset\oils_ais_analysis")
+oil_path = r"D:\Suhendra\BARATA\Riset\data oil\kepri_201812_oils\kepri_20181207_oils.shp"
 ais_path = r"D:\BARATA\10.ais\2018\indo_20181207_ais.csv"
 
 oil_gdf = gpd.read_file(oil_path).sort_values(by='DATE-TIME')
@@ -26,7 +26,7 @@ ais_gdf = gpd.GeoDataFrame(ais_df, geometry=gpd.points_from_xy(ais_df['longitude
 
 # membuat buffer dari centroid oil
 oil_buffer = oil_gdf.copy()
-oil_buffer.geometry = oil_buffer.geometry.centroid.buffer(1)
+oil_buffer.geometry = oil_buffer.geometry.centroid.buffer(0.5)
 
 oil_buffer['DATE-TIME'] = [datetime.strptime(i, '%Y-%m-%dT%H:%M:%S.%fZ') for i in oil_buffer['DATE-TIME']]
 
